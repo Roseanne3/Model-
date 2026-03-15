@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Workshop สร้าง Model Minecraft Bedrock</title>
+<style>
+  :root {
+    --dark: #0F172A;
+    --card: #1E293B;
+    --border: #334155;
+    --text: #E2E8F0;
+    --muted: #94A3B8;
+    --entity: #6366F1;
+    --item: #0EA5E9;
+    --block: #10B981;
+    --armor: #F59E0B;
+    --base: #8B5CF6;
+    --green: #22C55E;
+    --red: #EF4444;
+    --yellow: #F59E0B;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', 'Sarabun', sans-serif;
+    background: var(--dark);
+    color: var(--text);
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  /* ── Nav ── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: rgba(15,23,42,0.95);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 20px;
+    display: flex; gap: 6px; flex-wrap: wrap; align-items: center;
+  }
+  nav a {
+    color: var(--muted); text-decoration: none;
+    font-size: 12px; padding: 4px 10px;
+    border-radius: 20px; border: 1px solid var(--border);
+    transition: all .2s;
+  }
+  nav a:hover { color: var(--text); border-color: var(--base); background: rgba(139,92,246,.1); }
+  nav .logo { color: var(--text); font-weight: 700; font-size: 14px; margin-right: 8px; }
+
+  /* ── Layout ── */
+  .container { max-width: 860px; margin: 0 auto; padding: 80px 20px 60px; }
+
+  /* ── Hero ── */
+  .hero {
+    background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 50%, #064e3b 100%);
+    border: 1px solid var(--border);
+    border-radius: 20px; padding: 48px 36px; margin-bottom: 40px; text-align: center;
+  }
+  .hero h1 { font-size: 2.4em; font-weight: 800; line-height: 1.2; margin-bottom: 12px; }
+  .hero p { color: var(--muted); font-size: 1.05em; margin-bottom: 20px; }
+  .badges { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  .badge {
+    padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
+    border: 1px solid;
+  }
+
+  /* ── Chapter banner ── */
+  .chapter {
+    border-radius: 16px; padding: 28px 28px 20px;
+    margin: 36px 0 20px; border: 1px solid;
+  }
+  .chapter .ch-no { font-size: 11px; opacity: .6; margin-bottom: 4px; letter-spacing: 2px; text-transform: uppercase; }
+  .chapter h2 { font-size: 1.8em; font-weight: 800; margin-bottom: 6px; }
+  .chapter p { opacity: .75; font-size: 0.95em; }
+
+  /* ── Section ── */
+  h3 { font-size: 1.15em; font-weight: 700; margin: 24px 0 10px; color: var(--text); }
+  h4 { font-size: 1em; font-weight: 600; margin: 16px 0 8px; color: var(--muted); }
+  p { margin-bottom: 10px; color: #CBD5E1; }
+
+  /* ── Steps ── */
+  .steps { display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }
+  .step {
+    display: flex; gap: 0; border-radius: 10px; overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .step-num {
+    min-width: 44px; display: flex; align-items: center; justify-content: center;
+    font-size: 1.1em; font-weight: 800; color: white;
+    background: var(--accent, var(--base));
+  }
+  .step-body { padding: 10px 14px; background: #1E293B; flex: 1; }
+  .step-body strong { display: block; font-size: 0.95em; color: var(--text); margin-bottom: 2px; }
+  .step-body span { font-size: 0.85em; color: var(--muted); }
+
+  /* ── Code ── */
+  pre {
+    background: #020617; border: 1px solid var(--border);
+    border-left: 3px solid var(--entity);
+    border-radius: 10px; padding: 16px; overflow-x: auto;
+    font-size: 12px; line-height: 1.7; margin: 10px 0;
+    font-family: 'Consolas', 'Courier New', monospace;
+  }
+  code { color: #93C5FD; }
+  .cm { color: #64748B; }
+  .st { color: #6EE7B7; }
+  .kw { color: #F472B6; }
+  .hl { color: #86EFAC; background: rgba(34,197,94,.08); display: block; }
+
+  /* ── Diagram ── */
+  .diagram {
+    background: #020617; border: 1px solid #1E3A5F;
+    border-left: 3px solid var(--item);
+    border-radius: 10px; padding: 16px 20px; margin: 10px 0;
+    font-family: 'Consolas', monospace; font-size: 12px;
+    line-height: 1.8; color: #7DD3FC; overflow-x: auto;
+    white-space: pre;
+  }
+
+  /* ── Image frame ── */
+  .img-frame {
+    background: #1E293B; border: 1px solid var(--border);
+    border-radius: 12px; overflow: hidden; margin: 12px 0;
+  }
+  .img-frame .img-label {
+    padding: 8px 14px; font-size: 11px; color: var(--muted);
+    background: #0F172A; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .img-frame .img-label::before { content: '🖼'; }
+  .img-frame img {
+    width: 100%; display: block; max-height: 320px; object-fit: contain;
+    background: #0a0f1e; padding: 8px;
+  }
+  .img-frame .img-caption {
+    padding: 8px 14px; font-size: 12px; color: var(--muted);
+    border-top: 1px solid var(--border);
+  }
+  .img-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
+
+  /* ── Boxes ── */
+  .box {
+    border-radius: 10px; padding: 12px 16px; margin: 10px 0;
+    border-left: 4px solid; font-size: 0.9em;
+  }
+  .box-tip  { background: #1c1a07; border-color: var(--yellow); }
+  .box-warn { background: #1c0a07; border-color: var(--red); }
+  .box-note { background: #0e0f1c; border-color: var(--entity); }
+  .box-done { background: #061207; border-color: var(--green); }
+  .box strong { display: block; margin-bottom: 4px; }
+  .box-tip  strong { color: var(--yellow); }
+  .box-warn strong { color: var(--red); }
+  .box-note strong { color: #a5b4fc; }
+  .box-done strong { color: var(--green); }
+
+  /* ── Table ── */
+  table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 13px; }
+  th { background: #0F172A; padding: 8px 12px; text-align: left; color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--border); }
+  td { padding: 8px 12px; border-bottom: 1px solid #1E293B; }
+  tr:nth-child(even) td { background: rgba(255,255,255,.02); }
+  td:first-child { color: #93C5FD; font-family: monospace; font-size: 12px; }
+
+  /* ── HR ── */
+  hr { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
+
+  /* ── Colors per chapter ── */
+  .c-entity { --accent: var(--entity); }
+  .c-item   { --accent: var(--item); }
+  .c-block  { --accent: var(--block); }
+  .c-armor  { --accent: var(--armor); }
+  .c-base   { --accent: var(--base); }
+
+  @media(max-width:600px) {
+    .hero h1 { font-size: 1.6em; }
+    .img-grid { grid-template-columns: 1fr; }
+    nav { padding: 8px 12px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="logo">🎮 MC Model</span>
+  <a href="#intro">เริ่มต้น</a>
+  <a href="#entity">Entity</a>
+  <a href="#item">Item</a>
+  <a href="#block">Block</a>
+  <a href="#armor">Armor</a>
+  <a href="#anim">Animation</a>
+  <a href="#import">นำเข้าเกม</a>
+</nav>
+
+<div class="container">
+
+<!-- HERO -->
+<div class="hero">
+  <h1>🎮 Workshop สร้าง Model<br>Minecraft Bedrock</h1>
+  <p>ทำตามได้เลย ทีละขั้นตอน มีรูปประกอบทุกหัวข้อ</p>
+  <div class="badges">
+    <span class="badge" style="color:#818CF8;border-color:#4338CA">Entity</span>
+    <span class="badge" style="color:#38BDF8;border-color:#0369A1">Item</span>
+    <span class="badge" style="color:#34D399;border-color:#065F46">Block</span>
+    <span class="badge" style="color:#FBB F24;border-color:#92400E;color:#FCD34D">Armor</span>
+    <span class="badge" style="color:#C4B5FD;border-color:#5B21B6">Blockbench</span>
+  </div>
+</div>
+
+<!-- INTRO -->
+<section id="intro">
+  <div class="chapter c-base" style="background:linear-gradient(135deg,#1e1b4b,#0f172a);border-color:#4338CA">
+    <div class="ch-no">บทที่ 00</div>
+    <h2>เตรียมตัวและทำความเข้าใจ</h2>
+    <p>ติดตั้ง Blockbench และเข้าใจระบบก่อนเริ่ม</p>
+  </div>
+
+  <h3>ดาวน์โหลด Blockbench</h3>
+  <div class="img-grid">
+    <div class="img-frame">
+      <div class="img-label">Blockbench — PC Version</div>
+      <img src="https://www.blockbench.net/img/screenshot.png" alt="Blockbench UI Screenshot" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+      <div style="display:none;padding:40px;text-align:center;color:var(--muted);font-size:12px">[ เปิดด้วย internet เพื่อดูรูป ]</div>
+      <div class="img-caption">Blockbench — เครื่องมือสร้าง model ฟรีสำหรับ Minecraft Bedrock</div>
+    </div>
+    <div class="img-frame">
+      <div class="img-label">เว็บไซต์ Blockbench</div>
+      <img src="https://www.blockbench.net/img/frontpage/blockbench_interface.png" alt="Blockbench interface" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+      <div style="display:none;padding:40px;text-align:center;color:var(--muted);font-size:12px">[ เปิดด้วย internet เพื่อดูรูป ]</div>
+      <div class="img-caption">blockbench.net — ดาวน์โหลดฟรี หรือใช้ผ่าน web.blockbench.net</div>
+    </div>
+  </div>
+
+  <div class="steps">
+    <div class="step c-base">
+      <div class="step-num" style="background:var(--base)">1</div>
+      <div class="step-body"><strong>PC — blockbench.net</strong><span>กด Download > เลือก OS > ติดตั้ง</span></div>
+    </div>
+    <div class="step c-base">
+      <div class="step-num" style="background:var(--base)">2</div>
+      <div class="step-body"><strong>Android — Play Store ค้นหา "Blockbench"</strong><span>ดาวน์โหลดฟรี Android 8.0+</span></div>
+    </div>
+    <div class="step c-base">
+      <div class="step-num" style="background:var(--base)">3</div>
+      <div class="step-body"><strong>Web — web.blockbench.net</strong><span>ใช้เบราว์เซอร์ทันที ไม่ต้องติดตั้ง</span></div>
+    </div>
+  </div>
+
+  <h3>ระบบ Coordinate ใน Bedrock</h3>
+  <div class="diagram">  Y (บน)
+  |
+  |     / Z (หน้าหลัง)
+  |   /
+  | /
+  +---------- X (ซ้ายขวา)
+
+  จุดกลาง [0, 0, 0] = ตรงกลางพื้น
+  ผู้เล่นยืน: เท้า = Y 0,  หัว = Y 28
+  1 block = 16 × 16 × 16 unit</div>
+
+  <h3>โครงสร้าง geo.json</h3>
+  <div class="diagram">  geometry.my_mob                  ← ชื่อ model
+  │
+  └── bone: root  [pivot 0,0,0]    ← จุดยึดหลัก
+        │
+        ├── bone: body  [pivot 0,12,0]
+        │     └── cube  origin[-4,6,-2]  size[8,12,4]
+        │
+        └── bone: head  [pivot 0,24,0]
+              └── cube  origin[-4,20,-4]  size[8,8,8]</div>
+
+  <div class="box box-tip">
+    <strong>💡 pivot คืออะไร</strong>
+    pivot = จุดหมุนของ bone  ถ้า head มี pivot ที่คอ (Y=24) มันจะหมุนรอบคอ = ถูกต้อง
+    ถ้า pivot อยู่กลางหัว = หมุนผิดท่า
+  </div>
+</section>
+
+<hr>
+
+<!-- ENTITY -->
+<section id="entity">
+  <div class="chapter c-entity" style="background:linear-gradient(135deg,#1e1b4b,#0f172a);border-color:#4338CA">
+    <div class="ch-no">Workshop 01</div>
+    <h2 style="color:#A5B4FC">🦊 Entity Model — Crystal Fox</h2>
+    <p>สร้าง mob ใหม่ตั้งแต่กระดูกถึง texture ใส่เกมได้จริง</p>
+  </div>
+
+  <h3>รูปตัวอย่าง Entity ใน Blockbench</h3>
+  <div class="img-grid">
+    <div class="img-frame">
+      <div class="img-label">ตัวอย่าง Entity Model ใน Blockbench</div>
+      <img src="https://www.blockbench.net/img/wiki/bedrock_entity.png" alt="Entity in Blockbench" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+      <div style="display:none;background:#0a0f1e;padding:60px 20px;text-align:center">
+        <div style="font-size:40px">🦊</div>
+        <div style="color:var(--muted);font-size:12px;margin-top:8px">Entity Model Preview</div>
+      </div>
+      <div class="img-caption">Entity model — มี bone hierarchy ซ้อนกัน</div>
+    </div>
+    <div class="img-frame">
+      <div class="img-label">UV Mapping Editor</div>
+      <img src="https://www.blockbench.net/img/wiki/uv_editor.png" alt="UV Editor" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+      <div style="display:none;background:#0a0f1e;padding:60px 20px;text-align:center">
+        <div style="font-size:40px">🎨</div>
+        <div style="color:var(--muted);font-size:12px;margin-top:8px">UV Editor</div>
+      </div>
+      <div class="img-caption">UV Editor — จัดตำแหน่ง texture แต่ละหน้า</div>
+    </div>
+  </div>
+
+  <h3>โครงสร้าง bone ของ Crystal Fox</h3>
+  <div class="diagram">  root  [0, 0, 0]
+    body  [0, 10, 0]        ← ลำตัว
+      head  [0, 18, 0]      ← หัว
+        ear_L  [-3, 22, -3] ← หูซ้าย
+        ear_R  [ 3, 22, -3] ← หูขวา
+        snout  [0, 16, -5]  ← ปาก
+      tail  [0, 10, 4]      ← หาง
+    leg_FL  [-3, 10, -3]    ← ขาหน้าซ้าย
+    leg_FR  [ 3, 10, -3]    ← ขาหน้าขวา
+    leg_BL  [-3, 10,  3]    ← ขาหลังซ้าย
+    leg_BR  [ 3, 10,  3]    ← ขาหลังขวา</div>
+
+  <h3>ขนาด Cube แต่ละ bone</h3>
+  <table>
+    <tr><th>Bone</th><th>Origin</th><th>Size</th><th>UV</th></tr>
+    <tr><td>body</td><td>-4, 6, -3</td><td>8, 10, 6</td><td>0, 0</td></tr>
+    <tr><td>head</td><td>-3, 16, -5</td><td>6, 6, 6</td><td>28, 0</td></tr>
+    <tr><td>snout</td><td>-1.5, 14, -7</td><td>3, 2, 2</td><td>0, 20</td></tr>
+    <tr><td>ear_L/R</td><td>±1.5, 20, -3.5</td><td>2, 3, 1</td><td>28, 16</td></tr>
+    <tr><td>ขา x4</td><td>-1.5, 0, -1.5</td><td>3, 6, 3</td><td>0, 26</td></tr>
+    <tr><td>tail</td><td>-1.5, 10, 4</td><td>3, 4, 4</td><td>20, 20</td></tr>
+  </table>
+
+  <h3>ขั้นตอนทำใน Blockbench</h3>
+  <div class="steps" id="entity-steps"></div>
+
+  <h3>RP/entity/crystal_fox.entity.json</h3>
+  <pre><code>{
+  "format_version": "1.10.0",
+  "minecraft:client_entity": {
+    "description": {
+      "identifier": "myaddon:crystal_fox",
+      "materials": { "default": "entity_alphatest" },
+      "textures": {
+        "default": "textures/entity/crystal_fox"
+      },
+      "geometry": {
+        "default": "geometry.crystal_fox"
+      },
+      "render_controllers": ["controller.render.default"],
+      "spawn_egg": {
+        "base_color": "#E8D5C4",
+        "overlay_color": "#FF9999"
+      }
+    }
+  }
+}</code></pre>
+
+  <div class="box box-done">
+    <strong>✅ ผลลัพธ์ที่ได้</strong>
+    geo.json ของ Crystal Fox พร้อมใช้ • texture 64×64 วาดสี •
+    entity.json เชื่อม model แล้ว • spawn ด้วย egg ในเกมได้
+  </div>
+</section>
+
+<hr>
+
+<!-- ITEM -->
+<section id="item">
+  <div class="chapter c-item" style="background:linear-gradient(135deg,#0c2944,#0f172a);border-color:#0369A1">
+    <div class="ch-no">Workshop 02</div>
+    <h2 style="color:#7DD3FC">⚔️ Item Model — Crystal Blade</h2>
+    <p>สร้างดาบ 3D แสดงในมือผู้เล่น ผ่านระบบ Attachable</p>
+  </div>
+
+  <h3>ตัวอย่าง Item 3D ใน Blockbench</h3>
+  <div class="img-frame">
+    <div class="img-label">ตัวอย่าง Item/Weapon Model</div>
+    <img src="https://www.blockbench.net/img/wiki/bedrock_item.png" alt="Item Model" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+    <div style="display:none;background:#0a0f1e;padding:60px 20px;text-align:center">
+      <div style="font-size:60px">⚔️</div>
+      <div style="color:var(--muted);font-size:13px;margin-top:8px">Crystal Blade — 3D Item Model</div>
+      <div style="color:#475569;font-size:11px;margin-top:4px">ประกอบจาก cube หลายชิ้น</div>
+    </div>
+    <div class="img-caption">Item 3D — ใช้ geo.json + attachable.json แสดงในมือผู้เล่น</div>
+  </div>
+
+  <h3>โครงสร้าง bone ของดาบ</h3>
+  <div class="diagram">  root  [0, 0, 0]
+    blade_main    origin[-0.5, 4, -0.5]  size[1, 14, 1]   ← ใบดาบหลัก
+    blade_edge_L  origin[-1,   6, -0.25] size[0.5,10,0.5] ← ขอบซ้าย
+    blade_edge_R  origin[0.5,  6, -0.25] size[0.5,10,0.5] ← ขอบขวา
+    blade_tip     origin[-0.25,18,-0.25] size[0.5, 2,0.5] ← ปลาย
+    crossguard    origin[-2.5,  3, -0.5] size[5,   1,  1] ← กาดมือ
+    handle        origin[-0.5,  0, -0.5] size[1,   3,  1] ← ด้ามจับ
+    pommel        origin[-1,   -1,    -1] size[2,  1,  2] ← หัวด้าม</div>
+
+  <h3>ขั้นตอนสร้าง Item Model</h3>
+  <div class="steps" id="item-steps"></div>
+
+  <h3>RP/attachables/crystal_blade.json</h3>
+  <pre><code>{
+  "format_version": "1.10.0",
+  "minecraft:attachable": {
+    "description": {
+      "identifier": "myaddon:crystal_blade",
+      "materials": {
+        "default": "entity_alphatest",
+        "enchanted": "entity_alphatest_glint"
+      },
+      "textures": {
+        "default": "textures/items/crystal_blade",
+        "enchanted": "textures/misc/enchanted_item_glint"
+      },
+      "geometry": { "default": "geometry.crystal_blade" },
+      "render_controllers": ["controller.render.item_default"]
+    }
+  }
+}</code></pre>
+
+  <div class="box box-note">
+    <strong>📌 Item 3D ต้องมี 2 ไฟล์</strong>
+    1) geo.json — รูปร่างดาบ &nbsp; 2) attachable.json — บอกว่าให้แสดงในมือผู้เล่น
+    ถ้าไม่มี attachable.json เกมจะแสดงแค่ sprite 2D ธรรมดา
+  </div>
+</section>
+
+<hr>
+
+<!-- BLOCK -->
+<section id="block">
+  <div class="chapter c-block" style="background:linear-gradient(135deg,#022c22,#0f172a);border-color:#065F46">
+    <div class="ch-no">Workshop 03</div>
+    <h2 style="color:#6EE7B7">🔷 Block Model — Crystal Pillar</h2>
+    <p>สร้างบล็อครูปทรงแปดเหลี่ยมที่ไม่ใช่แค่ cube ธรรมดา</p>
+  </div>
+
+  <h3>รูปตัวอย่าง Block Geometry</h3>
+  <div class="img-grid">
+    <div class="img-frame">
+      <div class="img-label">Block Geometry ใน Blockbench</div>
+      <img src="https://www.blockbench.net/img/wiki/bedrock_block.png" alt="Block Geometry" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+      <div style="display:none;background:#0a0f1e;padding:60px 20px;text-align:center">
+        <div style="font-size:50px">🔷</div>
+        <div style="color:var(--muted);font-size:12px;margin-top:8px">Crystal Pillar Block</div>
+      </div>
+      <div class="img-caption">Block custom geometry — รูปทรงไม่ใช่ full cube</div>
+    </div>
+    <div class="img-frame">
+      <div class="img-label">มุมมองจากบน (Top View)</div>
+      <div style="background:#020617;padding:24px;font-family:monospace;font-size:13px;color:#7DD3FC;line-height:1.8;min-height:180px">
+        <div style="color:#94A3B8;font-size:11px;margin-bottom:8px">Top View — Crystal Pillar</div>
+      ░░░░░░░░<br>
+    ░░████████░░<br>
+    ░░████████░░<br>
+  ░░██████████░░<br>
+  ░░██████████░░<br>
+    ░░████████░░<br>
+    ░░████████░░<br>
+      ░░░░░░░░<br>
+        <div style="color:#475569;font-size:11px;margin-top:8px">ทำจาก cube 2 ชิ้นซ้อนกัน</div>
+      </div>
+      <div class="img-caption">รูปแปดเหลี่ยม — cube กลาง + cube ขยาย</div>
+    </div>
+  </div>
+
+  <h3>ขั้นตอนสร้าง Block Model</h3>
+  <div class="steps" id="block-steps"></div>
+
+  <h3>BP/blocks/crystal_pillar.json</h3>
+  <pre><code>{
+  "format_version": "1.21.0",
+  "minecraft:block": {
+    "description": {
+      "identifier": "myaddon:crystal_pillar",
+      "menu_category": { "category": "nature" }
+    },
+    "components": {
+      "minecraft:geometry": {
+        "identifier": "geometry.crystal_pillar"
+      },
+      "minecraft:material_instances": {
+        "*": {
+          "texture": "crystal_pillar",
+          "render_method": "alpha_test"
+        }
+      },
+      "minecraft:collision_box": {
+        "origin": [-4, 0, -4],
+        "size": [8, 16, 8]
+      },
+      "minecraft:light_emission": { "emission": 3 },
+      "minecraft:destructible_by_mining": { "seconds_to_destroy": 1.5 }
+    }
+  }
+}</code></pre>
+
+  <div class="box box-warn">
+    <strong>⚠️ collision_box ต้องกำหนดเอง</strong>
+    ถ้าไม่กำหนด Minecraft ใช้ full cube แทน — ผู้เล่นชนกับอากาศรอบๆ บล็อค
+  </div>
+</section>
+
+<hr>
+
+<!-- ARMOR -->
+<section id="armor">
+  <div class="chapter c-armor" style="background:linear-gradient(135deg,#451a03,#0f172a);border-color:#92400E">
+    <div class="ch-no">Workshop 04</div>
+    <h2 style="color:#FCD34D">🛡️ Armor Model — Crystal Set</h2>
+    <p>ชุดเกราะ custom ครบ 4 ชิ้น ใส่บนตัวผู้เล่นได้จริง</p>
+  </div>
+
+  <h3>หลักสำคัญ: Armor ต้องใหญ่กว่าตัวนิดหน่อย</h3>
+  <div class="diagram">  Steve vanilla head:
+    cube  origin[-4, 20, -4]  size[8, 8, 8]
+
+  Crystal Helmet (ต้องใหญ่กว่า +0.5 ทุกด้าน):
+    cube  origin[-4.5, 19.5, -4.5]  size[9, 9, 9]
+
+  ถ้าเล็กเกิน  → texture ทะลุเข้าหัว (clipping)
+  ถ้าใหญ่เกิน → เกราะดูลอยออกมา
+  แนะนำ: เพิ่ม 0.5 unit ทุกด้าน</div>
+
+  <h3>Bone Hierarchy ที่ต้องสร้าง</h3>
+  <table>
+    <tr><th>ชิ้น</th><th>Bone ที่ต้องมี</th><th>Texture</th></tr>
+    <tr><td>Helmet</td><td>root → hat [pivot 0,24,0]</td><td>crystal_armor_1.png 64×32</td></tr>
+    <tr><td>Chestplate</td><td>root → body → rightArm + leftArm</td><td>crystal_armor_1.png 64×32</td></tr>
+    <tr><td>Leggings</td><td>root → waist → leg_R + leg_L</td><td>crystal_armor_2.png 64×32</td></tr>
+    <tr><td>Boots</td><td>root → foot_R + foot_L</td><td>crystal_armor_1.png 64×32</td></tr>
+  </table>
+
+  <h3>ขั้นตอนสร้าง Helmet</h3>
+  <div class="steps" id="armor-steps"></div>
+
+  <h3>RP/attachables/crystal_helmet.json</h3>
+  <pre><code>{
+  "format_version": "1.10.0",
+  "minecraft:attachable": {
+    "description": {
+      "identifier": "myaddon:crystal_helmet",
+      "materials": {
+        "default": "armor",
+        "enchanted": "armor_enchanted"
+      },
+      "textures": {
+        "default": "textures/models/armor/crystal_armor_1",
+        "enchanted": "textures/misc/enchanted_item_glint"
+      },
+      "geometry": { "default": "geometry.crystal_helmet" },
+      "render_controllers": ["controller.render.armor"]
+    }
+  }
+}
+<span class="cm">// leggings ใช้ crystal_armor_2 แทน crystal_armor_1</span></code></pre>
+</section>
+
+<hr>
+
+<!-- ANIMATION -->
+<section id="anim">
+  <div class="chapter c-entity" style="background:linear-gradient(135deg,#1e1b4b,#0f172a);border-color:#4338CA">
+    <div class="ch-no">Workshop 05</div>
+    <h2 style="color:#A5B4FC">🎬 Animation — Crystal Fox</h2>
+    <p>ทำให้ Fox เดิน วิ่ง และหางแกว่ง</p>
+  </div>
+
+  <h3>Timeline ใน Blockbench</h3>
+  <div class="img-frame">
+    <div class="img-label">Animation Timeline ใน Blockbench</div>
+    <img src="https://www.blockbench.net/img/wiki/animation_editor.png" alt="Animation Editor" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+    <div style="display:none;background:#0a0f1e;padding:50px 20px;text-align:center">
+      <div style="font-size:40px">🎬</div>
+      <div style="color:#94A3B8;margin-top:8px;font-size:13px">Animation Editor</div>
+      <div style="background:#0F172A;border:1px solid #1E293B;border-radius:8px;margin-top:12px;padding:12px;font-family:monospace;font-size:11px;text-align:left;color:#7DD3FC">
+        [idle] loop ──────────────<br>
+        &nbsp;&nbsp;tail  ●──────●──────●<br>
+        [walk] loop ──────────────<br>
+        &nbsp;&nbsp;leg_FL ●──●──●──●──●<br>
+        &nbsp;&nbsp;leg_FR ●──●──●──●──●
+      </div>
+    </div>
+    <div class="img-caption">Timeline — แต่ละเส้นคือ bone แต่ละจุดคือ keyframe</div>
+  </div>
+
+  <h3>animation.json — Walk</h3>
+  <pre><code>"animation.crystal_fox.walk": {
+  "loop": true,
+  "animation_length": 1.0,
+  "bones": {
+    "leg_FL": {
+      "rotation": {
+        "0.0": [20, 0, 0],
+        "0.5": [-20, 0, 0],
+        "1.0": [20, 0, 0]
+      }
+    },
+    "leg_FR": {
+      "rotation": {
+        "0.0": [-20, 0, 0],
+        "0.5": [20, 0, 0],
+        "1.0": [-20, 0, 0]
+      }
+    }
+    <span class="cm">// leg_BL = เหมือน leg_FR, leg_BR = เหมือน leg_FL</span>
+  }
+}</code></pre>
+
+  <h3>Animation Controller</h3>
+  <pre><code>{
+  "format_version": "1.10.0",
+  "animation_controllers": {
+    "controller.animation.crystal_fox": {
+      "initial_state": "idle",
+      "states": {
+        "idle": {
+          "animations": ["idle"],
+          "transitions": [
+            { "walk": "query.modified_move_speed > 0.1" }
+          ]
+        },
+        "walk": {
+          "animations": [{ "walk": "query.modified_move_speed" }],
+          "transitions": [
+            { "idle": "query.modified_move_speed &lt;= 0.1" }
+          ]
+        }
+      }
+    }
+  }
+}</code></pre>
+</section>
+
+<hr>
+
+<!-- IMPORT -->
+<section id="import">
+  <div class="chapter c-base" style="background:linear-gradient(135deg,#1e1b4b,#0f172a);border-color:#5B21B6">
+    <div class="ch-no">บทที่ 06</div>
+    <h2>📦 นำเข้าเกมและ Test</h2>
+    <p>แพ็คไฟล์ import และแก้ bug</p>
+  </div>
+
+  <h3>โครงสร้างไฟล์ทั้งหมด</h3>
+  <div class="diagram">  MyAddon_RP/
+    manifest.json
+    entity/
+      crystal_fox.entity.json
+    models/entity/
+      crystal_fox.geo.json
+      crystal_blade.geo.json
+      crystal_helmet.geo.json
+    textures/entity/
+      crystal_fox.png           (64×64)
+    textures/items/
+      crystal_blade.png         (32×32)
+    textures/models/armor/
+      crystal_armor_1.png       (64×32)
+      crystal_armor_2.png       (64×32)
+    animations/
+      crystal_fox.animation.json
+    animation_controllers/
+      crystal_fox.ac.json
+    attachables/
+      crystal_blade.json
+      crystal_helmet.json</div>
+
+  <h3>ขั้นตอน Import</h3>
+  <div class="steps" id="import-steps"></div>
+
+  <h3>ปัญหาที่เจอบ่อย</h3>
+  <table>
+    <tr><th>ปัญหา</th><th>สาเหตุ</th><th>วิธีแก้</th></tr>
+    <tr><td>Model ไม่โชว์</td><td>identifier ไม่ตรงกัน</td><td>เช็ค "geometry.xxx" ให้เหมือนทุกไฟล์</td></tr>
+    <tr><td>Texture สีม่วง</td><td>path ผิด</td><td>เช็ค path ใน entity.json</td></tr>
+    <tr><td>Armor ทะลุตัว</td><td>cube เล็กเกิน</td><td>เพิ่ม size +0.5 unit</td></tr>
+    <tr><td>Animation ไม่เล่น</td><td>ลืม scripts.animate</td><td>เพิ่ม "animate": ["ctrl"]</td></tr>
+    <tr><td>Block ชนอากาศ</td><td>ไม่มี collision_box</td><td>เพิ่ม minecraft:collision_box</td></tr>
+    <tr><td>Item ไม่โชว์ใน hand</td><td>ไม่มี attachable.json</td><td>สร้าง RP/attachables/item.json</td></tr>
+  </table>
+
+  <div class="box box-done" style="margin-top:32px">
+    <strong>✅ จบ Workshop ทั้งหมด</strong>
+    ตอนนี้นายมี: Crystal Fox (mob) • Crystal Blade (ดาบ 3D) •
+    Crystal Pillar (บล็อค) • Crystal Set (ชุดเกราะ) ครบ!
+  </div>
+</section>
+
+</div><!-- /container -->
+
+<script>
+// Entity steps
+const entitySteps = [
+  ['New Bedrock Model','File > New > Bedrock Model | Identifier: geometry.crystal_fox | Texture: 64×64'],
+  ['สร้าง Bone root','Outliner > คลิกขวา > Add Bone | ชื่อ: root | Pivot: 0, 0, 0'],
+  ['สร้าง Bone body (ใต้ root)','ชื่อ: body | Pivot: 0, 10, 0'],
+  ['Add Cube ลำตัว','Origin: -4,6,-3 | Size: 8,10,6 | UV: 0,0'],
+  ['สร้าง Bone head (ใต้ body)','ชื่อ: head | Pivot: 0, 18, 0'],
+  ['Add Cube หัว','Origin: -3,16,-5 | Size: 6,6,6 | UV: 28,0'],
+  ['สร้าง snout, ear_L, ear_R ใต้ head','ตามขนาดในตาราง'],
+  ['สร้าง 4 ขา ใต้ root','leg_FL, leg_FR, leg_BL, leg_BR ตาม pivot ด้านบน'],
+  ['สร้าง tail ใต้ body','Pivot: 0,10,4 | Cube: -1.5,10,4 size 3,4,4'],
+  ['UV Map ทุก cube','เปิด UV Editor จัด face ไม่ให้ซ้อนทับ'],
+  ['วาด Texture','แท็บ Paint | ตัว: #E8D5C4 | หู: #FF9999 | ขา: #C4A882'],
+  ['Export','File > Export > Bedrock Geometry → RP/models/entity/'],
+  ['Export Texture','File > Export > Textures → RP/textures/entity/crystal_fox.png'],
+];
+
+const itemSteps = [
+  ['New Bedrock Model','Identifier: geometry.crystal_blade | Texture: 32×32'],
+  ['สร้าง Bone root','Pivot: 0, 0, 0'],
+  ['Add Cube ใบดาบ (blade_main)','Origin: -0.5,4,-0.5 | Size: 1,14,1 | UV: 0,0'],
+  ['Add Cube ขอบซ้าย/ขวา','L: -1,6,-0.25 size 0.5,10,0.5 | R: mirror ซ้าย'],
+  ['Add Cube ปลายดาบ','Origin: -0.25,18,-0.25 | Size: 0.5,2,0.5'],
+  ['Add Cube กาดมือ','Origin: -2.5,3,-0.5 | Size: 5,1,1'],
+  ['Add Cube ด้ามจับ','Origin: -0.5,0,-0.5 | Size: 1,3,1'],
+  ['Add Cube หัวด้าม','Origin: -1,-1,-1 | Size: 2,1,2'],
+  ['UV + วาด Texture','ใบดาบ: #B3E5FC | กาดมือ: #FFD54F | ด้าม: #5D4037'],
+  ['Export','RP/models/entity/crystal_blade.geo.json'],
+];
+
+const blockSteps = [
+  ['New Bedrock Block (ไม่ใช่ Entity!)','File > New > เลือก "Bedrock Block"'],
+  ['Identifier','geometry.crystal_pillar | Texture: 16×32'],
+  ['สร้าง Bone root','Pivot: 0,0,0'],
+  ['Cube กลาง (cube_mid)','Origin: -3,0,-3 | Size: 6,16,6 | UV: 0,0'],
+  ['Cube ขยาย (cube_ext)','Origin: -4,2,-4 | Size: 8,12,8 | UV: 0,16 (ซ้อนกัน)'],
+  ['UV Map ทั้ง 2 cube','top/bottom = pattern crystal, ด้านข้าง = stripe แนวตั้ง'],
+  ['วาด Texture','สีหลัก: #B3E5FC | ขอบ: #FFFFFF | บน: #4DD0E1'],
+  ['Export','RP/models/blocks/crystal_pillar.geo.json'],
+];
+
+const armorSteps = [
+  ['New Bedrock Model','Identifier: geometry.crystal_helmet | Texture: 64×32'],
+  ['สร้าง Bone root','Pivot: 0,0,0'],
+  ['สร้าง Bone hat','Pivot: 0,24,0 (ตำแหน่งคอ)'],
+  ['Add Cube ตัวหมวก','Origin: -4.5,19.5,-4.5 | Size: 9,9,9 | UV: 0,0'],
+  ['Add Cube ยอด (optional)','Origin: -1.5,28.5,-1.5 | Size: 3,3,3 | UV: 24,0'],
+  ['UV + วาด Texture','สีหลัก: #81D4FA | ขอบ: #E0F7FA'],
+  ['Export','RP/models/entity/crystal_helmet.geo.json'],
+  ['ทำ chestplate, leggings, boots เหมือนกัน','ตาม bone hierarchy ในตาราง'],
+];
+
+const importSteps = [
+  ['Select ทั้ง BP + RP folder','อย่า select โฟลเดอร์นอก — select แค่ 2 folder ข้างใน'],
+  ['Compress เป็น .zip','คลิกขวา > Compress/Archive'],
+  ['เปลี่ยน .zip เป็น .mcaddon','rename ไฟล์ MyAddon.zip → MyAddon.mcaddon'],
+  ['เปิดด้วย Minecraft','กดเปิดไฟล์ > เลือกเปิดด้วย Minecraft'],
+  ['สร้าง World ใหม่','Add Behavior Pack + Resource Pack > เปิดทั้งสอง'],
+  ['เปิด Beta APIs','World Settings > Experiments > Beta APIs (ถ้าใช้ Script)'],
+  ['ทดสอบ','/summon myaddon:crystal_fox  |  /give @s myaddon:crystal_blade'],
+];
+
+function renderSteps(steps, containerId, color) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = steps.map((s,i) => `
+    <div class="step">
+      <div class="step-num" style="background:${color}">${i+1}</div>
+      <div class="step-body">
+        <strong>${s[0]}</strong>
+        <span>${s[1]}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+renderSteps(entitySteps, 'entity-steps', '#6366F1');
+renderSteps(itemSteps,   'item-steps',   '#0EA5E9');
+renderSteps(blockSteps,  'block-steps',  '#10B981');
+renderSteps(armorSteps,  'armor-steps',  '#F59E0B');
+renderSteps(importSteps, 'import-steps', '#8B5CF6');
+</script>
+
+</body>
+</html>
