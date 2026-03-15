@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Workshop สร้าง Model Minecraft Bedrock</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Noto+Sans+Thai:wght@400;600;700&display=swap');
+
+:root {
+  --dark: #0a0e1a;
+  --card: #111827;
+  --border: #1f2d3d;
+  --text: #e2e8f0;
+  --muted: #64748b;
+  --entity: #818cf8;
+  --item: #38bdf8;
+  --block: #34d399;
+  --armor: #fbbf24;
+  --base: #a78bfa;
+  --green: #22c55e;
+  --red: #f87171;
+  --pixel: 'Press Start 2P', monospace;
+  --thai: 'Noto Sans Thai', sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--dark);
+  color: var(--text);
+  font-family: var(--thai);
+  font-size: 14px;
+  line-height: 1.7;
+  overflow-x: hidden;
+}
+
+/* pixel grid bg */
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0;
+  background-image:
+    linear-gradient(rgba(129,140,248,.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(129,140,248,.03) 1px, transparent 1px);
+  background-size: 32px 32px;
+  pointer-events: none;
+}
+
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: rgba(10,14,26,.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 16px;
+  display: flex; gap: 6px; flex-wrap: wrap; align-items: center;
+}
+.nav-logo {
+  font-family: var(--pixel);
+  font-size: 9px; color: var(--entity);
+  margin-right: 10px; letter-spacing: 1px;
+}
+nav a {
+  color: var(--muted); text-decoration: none;
+  font-size: 11px; padding: 4px 10px;
+  border-radius: 4px; border: 1px solid var(--border);
+  font-family: var(--thai);
+  transition: all .15s;
+}
+nav a:hover { color: var(--text); border-color: var(--entity); background: rgba(129,140,248,.1); }
+
+.wrap { max-width: 820px; margin: 0 auto; padding: 80px 16px 60px; position: relative; z-index: 1; }
+
+/* hero */
+.hero {
+  text-align: center; padding: 52px 24px 44px;
+  margin-bottom: 40px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: linear-gradient(160deg, #0d1b3e 0%, #0a0e1a 60%, #0d2e1a 100%);
+  position: relative; overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 30% 40%, rgba(129,140,248,.12) 0%, transparent 60%),
+              radial-gradient(ellipse at 70% 70%, rgba(52,211,153,.08) 0%, transparent 50%);
+}
+.hero-pixel {
+  font-family: var(--pixel); font-size: 10px;
+  color: var(--entity); letter-spacing: 2px; margin-bottom: 14px;
+  opacity: .7;
+}
+.hero h1 {
+  font-size: clamp(1.6em, 5vw, 2.4em);
+  font-weight: 800; line-height: 1.2; margin-bottom: 12px;
+  background: linear-gradient(135deg, #e2e8f0, #818cf8, #34d399);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.hero p { color: var(--muted); max-width: 500px; margin: 0 auto 20px; }
+.badges { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.badge {
+  padding: 4px 12px; border-radius: 4px; font-size: 11px; font-weight: 700;
+  font-family: var(--pixel); letter-spacing: .5px;
+  border: 1px solid; image-rendering: pixelated;
+}
+
+/* chapter banner */
+.chapter {
+  border-radius: 12px; padding: 24px 24px 18px;
+  margin: 40px 0 20px; border: 1px solid;
+  position: relative; overflow: hidden;
+}
+.chapter::after {
+  content: '';
+  position: absolute; top: 0; right: 0; bottom: 0; width: 4px;
+  background: var(--accent, var(--entity));
+}
+.ch-no {
+  font-family: var(--pixel); font-size: 8px;
+  color: var(--accent, var(--entity)); opacity: .6;
+  margin-bottom: 6px; letter-spacing: 2px;
+}
+.chapter h2 { font-size: 1.6em; font-weight: 800; margin-bottom: 6px; }
+.chapter p { color: var(--muted); font-size: .9em; }
+
+h3 { font-size: 1.05em; font-weight: 700; margin: 22px 0 10px; }
+h4 { font-size: .9em; font-weight: 600; margin: 14px 0 6px; color: var(--muted); }
+
+/* MODEL VIEWER — SVG Minecraft-style */
+.model-viewer {
+  background: #060a14;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  margin: 12px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.model-viewer .mv-label {
+  font-family: var(--pixel); font-size: 8px;
+  color: var(--muted); letter-spacing: 1px;
+}
+.model-viewer svg { display: block; }
+
+.model-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 12px 0;
+}
+
+/* step cards */
+.steps { display: flex; flex-direction: column; gap: 6px; margin: 10px 0; }
+.step {
+  display: flex; border-radius: 8px; overflow: hidden;
+  border: 1px solid var(--border);
+}
+.sn {
+  min-width: 40px; display: flex; align-items: center; justify-content: center;
+  font-family: var(--pixel); font-size: 10px; color: white;
+  background: var(--acc);
+}
+.sb { padding: 10px 14px; background: #111827; flex: 1; }
+.sb strong { display: block; font-size: .9em; color: var(--text); margin-bottom: 2px; }
+.sb span { font-size: .82em; color: var(--muted); }
+
+/* code */
+pre {
+  background: #030712;
+  border: 1px solid #1e293b;
+  border-left: 3px solid var(--entity);
+  border-radius: 8px; padding: 14px 16px;
+  font-size: 11px; line-height: 1.8;
+  font-family: 'Consolas','Courier New',monospace;
+  overflow-x: auto; margin: 10px 0;
+  color: #93c5fd;
+}
+.cm { color: #475569; }
+.st { color: #6ee7b7; }
+
+/* boxes */
+.box {
+  border-radius: 8px; padding: 12px 16px; margin: 10px 0;
+  border-left: 3px solid; font-size: .88em;
+}
+.tip  { background: #16120a; border-color: var(--armor); }
+.warn { background: #160a0a; border-color: var(--red); }
+.note { background: #0e0d1c; border-color: var(--entity); }
+.done { background: #071212; border-color: var(--green); }
+.box strong { display: block; margin-bottom: 4px; font-size: .9em; }
+.tip  strong { color: var(--armor); }
+.warn strong { color: var(--red); }
+.note strong { color: var(--entity); }
+.done strong { color: var(--green); }
+
+/* table */
+table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 12px; }
+th { background: #0f172a; padding: 8px 10px; text-align: left; color: var(--muted); font-weight: 700; border-bottom: 1px solid var(--border); }
+td { padding: 8px 10px; border-bottom: 1px solid #1a2232; vertical-align: top; }
+tr:nth-child(even) td { background: rgba(255,255,255,.02); }
+td:first-child { color: #93c5fd; font-family: monospace; font-size: 11px; }
+
+hr { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
+
+.diagram {
+  background: #030712;
+  border: 1px solid #1e3a5f;
+  border-left: 3px solid var(--item);
+  border-radius: 8px; padding: 14px 18px; margin: 10px 0;
+  font-family: 'Consolas',monospace; font-size: 11px;
+  line-height: 1.9; color: #7dd3fc; overflow-x: auto;
+  white-space: pre;
+}
+.done-box {
+  background: linear-gradient(135deg, #071c12, #0a1a2e);
+  border: 1px solid #16a34a;
+  border-radius: 10px; padding: 14px 18px; margin: 16px 0;
+}
+.done-box h4 { color: #4ade80; margin: 0 0 6px; font-family: var(--pixel); font-size: 9px; letter-spacing: 1px; }
+.done-box ul { list-style: none; padding: 0; }
+.done-box li { color: #86efac; font-size: .88em; padding: 2px 0; }
+.done-box li::before { content: '✓  '; color: #22c55e; }
+
+@media(max-width:580px) {
+  .model-grid { grid-template-columns: 1fr; }
+  .hero h1 { font-size: 1.4em; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-logo">⛏ MC MODEL</span>
+  <a href="#intro">เริ่มต้น</a>
+  <a href="#entity">Entity</a>
+  <a href="#item">Item</a>
+  <a href="#block">Block</a>
+  <a href="#armor">Armor</a>
+  <a href="#anim">Animation</a>
+</nav>
+
+<div class="wrap">
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-pixel">MINECRAFT BEDROCK · WORKSHOP</div>
+  <h1>สร้าง Model<br>ทีละขั้นตอน</h1>
+  <p>Entity • Item • Block • Armor — มี diagram จำลอง model จริงทุกบท</p>
+  <div class="badges">
+    <span class="badge" style="color:#818cf8;border-color:#4338ca;background:rgba(67,56,202,.15)">ENTITY</span>
+    <span class="badge" style="color:#38bdf8;border-color:#0369a1;background:rgba(3,105,161,.15)">ITEM</span>
+    <span class="badge" style="color:#34d399;border-color:#065f46;background:rgba(6,95,70,.15)">BLOCK</span>
+    <span class="badge" style="color:#fbbf24;border-color:#92400e;background:rgba(146,64,14,.15)">ARMOR</span>
+  </div>
+</div>
+
+<!-- INTRO -->
+<section id="intro">
+  <div class="chapter" style="--accent:#a78bfa;background:linear-gradient(135deg,#130f2e,#0a0e1a);border-color:#2d1f5e">
+    <div class="ch-no">CHAPTER 00</div>
+    <h2>เตรียมตัวก่อนเริ่ม</h2>
+    <p>ทำความเข้าใจระบบ Coordinate และโครงสร้าง geo.json</p>
+  </div>
+
+  <h3>ระบบพิกัดใน Bedrock</h3>
+  <div class="model-viewer">
+    <div class="mv-label">COORDINATE SYSTEM</div>
+    <svg width="280" height="200" viewBox="0 0 280 200">
+      <defs>
+        <marker id="ah" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#94a3b8"/>
+        </marker>
+      </defs>
+      <!-- grid floor -->
+      <g opacity=".25">
+        <line x1="80" y1="160" x2="200" y2="160" stroke="#334155" stroke-width="1"/>
+        <line x1="80" y1="145" x2="200" y2="145" stroke="#334155" stroke-width="1"/>
+        <line x1="80" y1="130" x2="200" y2="130" stroke="#334155" stroke-width="1"/>
+        <line x1="95" y1="160" x2="95" y2="120" stroke="#334155" stroke-width="1"/>
+        <line x1="125" y1="160" x2="125" y2="120" stroke="#334155" stroke-width="1"/>
+        <line x1="155" y1="160" x2="155" y2="120" stroke="#334155" stroke-width="1"/>
+        <line x1="185" y1="160" x2="185" y2="120" stroke="#334155" stroke-width="1"/>
+      </g>
+      <!-- axes -->
+      <line x1="140" y1="170" x2="220" y2="170" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#ah)"/>
+      <line x1="140" y1="170" x2="140" y2="50" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#ah)"/>
+      <line x1="140" y1="170" x2="70" y2="130" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#ah)"/>
+      <!-- labels -->
+      <text x="226" y="174" fill="#f87171" font-size="12" font-family="monospace">X</text>
+      <text x="133" y="44" fill="#4ade80" font-size="12" font-family="monospace">Y</text>
+      <text x="54" y="128" fill="#60a5fa" font-size="12" font-family="monospace">Z</text>
+      <text x="224" y="186" fill="#94a3b8" font-size="9" font-family="monospace">ซ้าย/ขวา</text>
+      <text x="88" y="44" fill="#94a3b8" font-size="9" font-family="monospace">ล่าง/บน</text>
+      <text x="20" y="144" fill="#94a3b8" font-size="9" font-family="monospace">หน้า/หลัง</text>
+      <!-- origin dot -->
+      <circle cx="140" cy="170" r="4" fill="#818cf8"/>
+      <text x="145" y="185" fill="#818cf8" font-size="9" font-family="monospace">[0,0,0]</text>
+      <!-- cube example -->
+      <g opacity=".6">
+        <rect x="150" y="120" width="24" height="24" fill="none" stroke="#818cf8" stroke-width="1.5"/>
+        <text x="152" y="152" fill="#818cf8" font-size="8" font-family="monospace">1 block</text>
+        <text x="152" y="162" fill="#94a3b8" font-size="8" font-family="monospace">= 16 unit</text>
+      </g>
+    </svg>
+    <div class="mv-label" style="color:#94a3b8;font-size:9px">1 block = 16×16×16 unit</div>
+  </div>
+
+  <h3>โครงสร้าง Bone ใน geo.json</h3>
+  <div class="diagram">  geometry.my_mob
+  │
+  └── bone: root  [pivot 0,0,0]
+        │
+        ├── bone: body  [pivot 0,12,0]
+        │     └── cube  origin[-4,6,-2]  size[8,12,4]
+        │
+        └── bone: head  [pivot 0,24,0]
+              └── cube  origin[-4,20,-4]  size[8,8,8]</div>
+
+  <div class="box tip">
+    <strong>⚠ pivot คือจุดหมุน</strong>
+    head มี pivot ที่ Y=24 (คอ) → หมุนรอบคอ ถูกต้อง<br>
+    ถ้า pivot อยู่กลางหัว → หมุนผิดท่า
+  </div>
+</section>
+
+<hr>
+
+<!-- ENTITY -->
+<section id="entity">
+  <div class="chapter" style="--accent:#818cf8;background:linear-gradient(135deg,#13143a,#0a0e1a);border-color:#2d2f6a">
+    <div class="ch-no">WORKSHOP 01</div>
+    <h2 style="color:#a5b4fc">🦊 Entity — Crystal Fox</h2>
+    <p>สร้าง mob ใหม่ตั้งแต่กระดูกถึง texture</p>
+  </div>
+
+  <h3>โมเดล Crystal Fox (มุมมองด้านหน้าและด้านข้าง)</h3>
+  <div class="model-grid">
+    <!-- FRONT VIEW -->
+    <div class="model-viewer">
+      <div class="mv-label">FRONT VIEW</div>
+      <svg width="160" height="200" viewBox="0 0 160 200">
+        <!-- ground -->
+        <line x1="20" y1="178" x2="140" y2="178" stroke="#334155" stroke-width="1" stroke-dasharray="4,3"/>
+        <!-- shadow -->
+        <ellipse cx="80" cy="178" rx="32" ry="5" fill="#1e293b" opacity=".7"/>
+        <!-- LEGS -->
+        <rect x="52" y="148" width="12" height="28" rx="2" fill="#8B6347" stroke="#5D3F26" stroke-width="1"/>
+        <rect x="96" y="148" width="12" height="28" rx="2" fill="#8B6347" stroke="#5D3F26" stroke-width="1"/>
+        <!-- BODY -->
+        <rect x="46" y="86" width="68" height="68" rx="4" fill="#C4956A" stroke="#8B6347" stroke-width="1.5"/>
+        <!-- chest detail -->
+        <rect x="58" y="108" width="44" height="30" rx="3" fill="#E8C9A0" opacity=".6"/>
+        <!-- NECK -->
+        <rect x="66" y="70" width="28" height="20" rx="2" fill="#B8835A" stroke="#8B6347" stroke-width="1"/>
+        <!-- HEAD -->
+        <rect x="52" y="36" width="56" height="46" rx="5" fill="#D4A574" stroke="#8B6347" stroke-width="1.5"/>
+        <!-- EAR L -->
+        <polygon points="54,36 46,14 62,36" fill="#FF9999" stroke="#CC6666" stroke-width="1"/>
+        <polygon points="56,34 50,20 62,34" fill="#FFB3B3" opacity=".6"/>
+        <!-- EAR R -->
+        <polygon points="106,36 114,14 98,36" fill="#FF9999" stroke="#CC6666" stroke-width="1"/>
+        <polygon points="104,34 110,20 98,34" fill="#FFB3B3" opacity=".6"/>
+        <!-- EYES -->
+        <rect x="63" y="50" width="10" height="8" rx="2" fill="#2D1A0E"/>
+        <rect x="87" y="50" width="10" height="8" rx="2" fill="#2D1A0E"/>
+        <rect x="65" y="51" width="4" height="4" rx="1" fill="#fff" opacity=".8"/>
+        <rect x="89" y="51" width="4" height="4" rx="1" fill="#fff" opacity=".8"/>
+        <!-- SNOUT -->
+        <rect x="65" y="68" width="30" height="14" rx="3" fill="#A0694A" stroke="#7A4A30" stroke-width="1"/>
+        <rect x="76" y="70" width="8" height="6" rx="2" fill="#6B3A2A"/>
+        <!-- pixel highlight -->
+        <rect x="52" y="36" width="6" height="6" fill="#fff" opacity=".1" rx="1"/>
+        <!-- labels -->
+        <text x="6" y="58" fill="#94a3b8" font-size="8" font-family="monospace">head</text>
+        <text x="4" y="124" fill="#94a3b8" font-size="8" font-family="monospace">body</text>
+        <text x="12" y="166" fill="#94a3b8" font-size="8" font-family="monospace">legs</text>
+        <line x1="36" y1="57" x2="52" y2="57" stroke="#334155" stroke-width=".8"/>
+        <line x1="34" y1="122" x2="46" y2="122" stroke="#334155" stroke-width=".8"/>
+        <line x1="34" y1="164" x2="52" y2="164" stroke="#334155" stroke-width=".8"/>
+      </svg>
+    </div>
+    <!-- SIDE VIEW -->
+    <div class="model-viewer">
+      <div class="mv-label">SIDE VIEW</div>
+      <svg width="160" height="200" viewBox="0 0 160 200">
+        <line x1="20" y1="178" x2="140" y2="178" stroke="#334155" stroke-width="1" stroke-dasharray="4,3"/>
+        <ellipse cx="76" cy="178" rx="28" ry="5" fill="#1e293b" opacity=".7"/>
+        <!-- TAIL -->
+        <ellipse cx="122" cy="130" rx="18" ry="12" fill="#D4A574" stroke="#8B6347" stroke-width="1.5" transform="rotate(-20,122,130)"/>
+        <ellipse cx="130" cy="124" rx="10" ry="7" fill="#fff" opacity=".7" transform="rotate(-20,130,124)"/>
+        <!-- LEG front -->
+        <rect x="60" y="148" width="14" height="28" rx="2" fill="#8B6347" stroke="#5D3F26" stroke-width="1"/>
+        <!-- BODY -->
+        <rect x="44" y="86" width="68" height="66" rx="4" fill="#C4956A" stroke="#8B6347" stroke-width="1.5"/>
+        <!-- HEAD -->
+        <rect x="30" y="36" width="54" height="48" rx="5" fill="#D4A574" stroke="#8B6347" stroke-width="1.5"/>
+        <!-- SNOUT jut out -->
+        <rect x="16" y="62" width="26" height="18" rx="3" fill="#A0694A" stroke="#7A4A30" stroke-width="1"/>
+        <!-- EAR -->
+        <polygon points="46,36 38,14 58,36" fill="#FF9999" stroke="#CC6666" stroke-width="1"/>
+        <!-- EYE -->
+        <rect x="34" y="50" width="10" height="8" rx="2" fill="#2D1A0E"/>
+        <rect x="36" y="51" width="4" height="4" rx="1" fill="#fff" opacity=".8"/>
+        <!-- labels -->
+        <text x="104" y="115" fill="#94a3b8" font-size="8" font-family="monospace">tail</text>
+        <text x="6" y="62" fill="#94a3b8" font-size="8" font-family="monospace">snout</text>
+      </svg>
+    </div>
+  </div>
+
+  <h3>Bone Hierarchy</h3>
+  <div class="diagram">root [0,0,0]
+  body [0,10,0]         ← cube size[8,10,6]
+    head [0,18,0]       ← cube size[6,6,6]
+      ear_L [-3,22,-3]  ← cube size[2,3,1]
+      ear_R [ 3,22,-3]  ← cube size[2,3,1]
+      snout [0,16,-5]   ← cube size[3,2,2]
+    tail  [0,10,4]      ← cube size[3,4,4]
+  leg_FL [-3,10,-3]     ← cube size[3,6,3]
+  leg_FR [ 3,10,-3]
+  leg_BL [-3,10, 3]
+  leg_BR [ 3,10, 3]</div>
+
+  <h3>UV Texture Layout (64×64)</h3>
+  <div class="model-viewer">
+    <div class="mv-label">UV LAYOUT — 64×64</div>
+    <svg width="260" height="140" viewBox="0 0 260 140">
+      <!-- bg -->
+      <rect width="260" height="140" fill="#030712" rx="4"/>
+      <!-- grid -->
+      <g stroke="#1e293b" stroke-width=".5" opacity=".5">
+        <line x1="65" y1="0" x2="65" y2="140"/>
+        <line x1="130" y1="0" x2="130" y2="140"/>
+        <line x1="195" y1="0" x2="195" y2="140"/>
+        <line x1="0" y1="35" x2="260" y2="35"/>
+        <line x1="0" y1="70" x2="260" y2="70"/>
+        <line x1="0" y1="105" x2="260" y2="105"/>
+      </g>
+      <!-- HEAD zone -->
+      <rect x="2" y="2" width="72" height="32" fill="#818cf8" opacity=".2" rx="2"/>
+      <text x="6" y="12" fill="#818cf8" font-size="9" font-family="monospace">HEAD</text>
+      <text x="6" y="22" fill="#818cf8" font-size="7" font-family="monospace">28×28px</text>
+      <!-- BODY zone -->
+      <rect x="78" y="2" width="50" height="32" fill="#34d399" opacity=".2" rx="2"/>
+      <text x="82" y="12" fill="#34d399" font-size="9" font-family="monospace">BODY</text>
+      <text x="82" y="22" fill="#34d399" font-size="7" font-family="monospace">24×16</text>
+      <!-- SNOUT -->
+      <rect x="2" y="38" width="30" height="20" fill="#f87171" opacity=".2" rx="2"/>
+      <text x="4" y="50" fill="#f87171" font-size="8" font-family="monospace">SNT</text>
+      <!-- EAR -->
+      <rect x="36" y="38" width="30" height="20" fill="#fbbf24" opacity=".2" rx="2"/>
+      <text x="38" y="50" fill="#fbbf24" font-size="8" font-family="monospace">EAR</text>
+      <!-- LEGS -->
+      <rect x="2" y="72" width="88" height="32" fill="#60a5fa" opacity=".2" rx="2"/>
+      <text x="6" y="84" fill="#60a5fa" font-size="9" font-family="monospace">LEGS ×4</text>
+      <text x="6" y="94" fill="#60a5fa" font-size="7" font-family="monospace">แต่ละขา 12×12px</text>
+      <!-- TAIL -->
+      <rect x="95" y="38" width="32" height="28" fill="#a78bfa" opacity=".2" rx="2"/>
+      <text x="97" y="52" fill="#a78bfa" font-size="8" font-family="monospace">TAIL</text>
+      <!-- empty -->
+      <rect x="2" y="108" width="256" height="28" fill="#1e293b" opacity=".3" rx="2"/>
+      <text x="10" y="126" fill="#334155" font-size="9" font-family="monospace">ว่าง (ขยายได้)</text>
+      <!-- axes labels -->
+      <text x="232" y="136" fill="#475569" font-size="8" font-family="monospace">U→63</text>
+      <text x="244" y="12" fill="#475569" font-size="8" font-family="monospace" transform="rotate(90,244,12)">V↓</text>
+    </svg>
+    <div class="mv-label" style="color:#94a3b8;font-size:9px">cube แต่ละชิ้นต้องไม่ซ้อนทับกัน</div>
+  </div>
+
+  <h3>ขั้นตอนสร้างใน Blockbench</h3>
+  <div class="steps" id="es"></div>
+
+  <div class="done-box">
+    <h4>✓ ผลลัพธ์</h4>
+    <ul>
+      <li>geo.json Crystal Fox พร้อมใช้</li>
+      <li>texture 64×64 วาดสีครบ</li>
+      <li>entity.json เชื่อม model แล้ว</li>
+      <li>spawn ด้วย egg ในเกมได้</li>
+    </ul>
+  </div>
+</section>
+
+<hr>
+
+<!-- ITEM -->
+<section id="item">
+  <div class="chapter" style="--accent:#38bdf8;background:linear-gradient(135deg,#0a2240,#0a0e1a);border-color:#0e4a7a">
+    <div class="ch-no">WORKSHOP 02</div>
+    <h2 style="color:#7dd3fc">⚔ Item — Crystal Blade</h2>
+    <p>ดาบ 3D แสดงในมือผู้เล่น ผ่านระบบ Attachable</p>
+  </div>
+
+  <h3>โมเดลดาบ (ด้านหน้าและด้านข้าง)</h3>
+  <div class="model-grid">
+    <div class="model-viewer">
+      <div class="mv-label">CRYSTAL BLADE — FRONT</div>
+      <svg width="140" height="220" viewBox="0 0 140 220">
+        <!-- shadow -->
+        <ellipse cx="70" cy="210" rx="16" ry="4" fill="#1e293b" opacity=".6"/>
+        <!-- POMMEL -->
+        <rect x="54" y="196" width="32" height="10" rx="3" fill="#B8860B" stroke="#8B6914" stroke-width="1"/>
+        <!-- HANDLE -->
+        <rect x="62" y="168" width="16" height="30" rx="2" fill="#6B3A2A" stroke="#4A2518" stroke-width="1"/>
+        <!-- handle wrap lines -->
+        <line x1="62" y1="175" x2="78" y2="175" stroke="#4A2518" stroke-width="1.5"/>
+        <line x1="62" y1="183" x2="78" y2="183" stroke="#4A2518" stroke-width="1.5"/>
+        <line x1="62" y1="191" x2="78" y2="191" stroke="#4A2518" stroke-width="1.5"/>
+        <!-- CROSSGUARD -->
+        <rect x="36" y="160" width="68" height="12" rx="3" fill="#FFD700" stroke="#B8860B" stroke-width="1.5"/>
+        <rect x="42" y="162" width="56" height="8" rx="2" fill="#FFE44D" opacity=".5"/>
+        <!-- BLADE EDGES -->
+        <rect x="60" y="22" width="6" height="140" rx="1" fill="#93c5fd" opacity=".5"/>
+        <rect x="74" y="22" width="6" height="140" rx="1" fill="#93c5fd" opacity=".5"/>
+        <!-- BLADE MAIN -->
+        <rect x="63" y="20" width="14" height="142" rx="2" fill="#BAE6FD" stroke="#38BDF8" stroke-width="1.5"/>
+        <!-- BLADE SHINE -->
+        <rect x="65" y="24" width="5" height="130" rx="1" fill="#e0f2fe" opacity=".4"/>
+        <!-- TIP -->
+        <polygon points="70,4 63,28 77,28" fill="#E0F2FE" stroke="#38BDF8" stroke-width="1.5"/>
+        <polygon points="70,4 65,20 75,20" fill="#fff" opacity=".5"/>
+        <!-- crystal effect on blade -->
+        <line x1="66" y1="50" x2="70" y2="70" stroke="#fff" stroke-width=".8" opacity=".3"/>
+        <line x1="73" y1="90" x2="69" y2="120" stroke="#fff" stroke-width=".8" opacity=".3"/>
+        <!-- labels -->
+        <text x="4" y="16" fill="#94a3b8" font-size="7" font-family="monospace">tip</text>
+        <text x="2" y="100" fill="#94a3b8" font-size="7" font-family="monospace">blade</text>
+        <text x="2" y="166" fill="#94a3b8" font-size="7" font-family="monospace">guard</text>
+        <text x="2" y="183" fill="#94a3b8" font-size="7" font-family="monospace">handle</text>
+        <text x="2" y="202" fill="#94a3b8" font-size="7" font-family="monospace">pommel</text>
+        <line x1="18" y1="15" x2="63" y2="15" stroke="#334155" stroke-width=".6"/>
+        <line x1="18" y1="98" x2="63" y2="98" stroke="#334155" stroke-width=".6"/>
+        <line x1="18" y1="165" x2="36" y2="165" stroke="#334155" stroke-width=".6"/>
+        <line x1="18" y1="182" x2="62" y2="180" stroke="#334155" stroke-width=".6"/>
+        <line x1="18" y1="201" x2="54" y2="201" stroke="#334155" stroke-width=".6"/>
+      </svg>
+    </div>
+    <div class="model-viewer">
+      <div class="mv-label">SIDE VIEW + SIZE</div>
+      <svg width="140" height="220" viewBox="0 0 140 220">
+        <ellipse cx="70" cy="210" rx="8" ry="3" fill="#1e293b" opacity=".6"/>
+        <!-- pommel side -->
+        <rect x="60" y="196" width="20" height="10" rx="3" fill="#B8860B" stroke="#8B6914" stroke-width="1"/>
+        <!-- handle side -->
+        <rect x="65" y="168" width="10" height="30" rx="2" fill="#6B3A2A" stroke="#4A2518" stroke-width="1"/>
+        <!-- guard side (thin) -->
+        <rect x="56" y="160" width="28" height="12" rx="2" fill="#FFD700" stroke="#B8860B" stroke-width="1"/>
+        <!-- blade side (thin) -->
+        <rect x="65" y="18" width="10" height="144" rx="2" fill="#BAE6FD" stroke="#38BDF8" stroke-width="1"/>
+        <!-- tip side -->
+        <polygon points="70,4 65,22 75,22" fill="#E0F2FE" stroke="#38BDF8" stroke-width="1"/>
+        <!-- dimension lines -->
+        <line x1="96" y1="4" x2="96" y2="158" stroke="#475569" stroke-width=".8" stroke-dasharray="3,2"/>
+        <line x1="90" y1="4" x2="102" y2="4" stroke="#475569" stroke-width=".8"/>
+        <line x1="90" y1="158" x2="102" y2="158" stroke="#475569" stroke-width=".8"/>
+        <text x="104" y="84" fill="#7dd3fc" font-size="8" font-family="monospace">14u</text>
+        <line x1="44" y1="160" x2="44" y2="172" stroke="#475569" stroke-width=".8" stroke-dasharray="3,2"/>
+        <text x="8" y="168" fill="#fbbf24" font-size="8" font-family="monospace">guard</text>
+        <text x="10" y="178" fill="#fbbf24" font-size="8" font-family="monospace">5×1×1u</text>
+      </svg>
+    </div>
+  </div>
+
+  <h3>ขั้นตอนสร้าง</h3>
+  <div class="steps" id="is"></div>
+
+  <h3>RP/attachables/crystal_blade.json</h3>
+  <pre>{
+  "format_version": "1.10.0",
+  "minecraft:attachable": {
+    "description": {
+      "identifier": "myaddon:crystal_blade",
+      "geometry": { "default": "geometry.crystal_blade" },
+      "textures": { "default": "textures/items/crystal_blade" },
+      "render_controllers": ["controller.render.item_default"]
+    }
+  }
+}</pre>
+</section>
+
+<hr>
+
+<!-- BLOCK -->
+<section id="block">
+  <div class="chapter" style="--accent:#34d399;background:linear-gradient(135deg,#062318,#0a0e1a);border-color:#065f46">
+    <div class="ch-no">WORKSHOP 03</div>
+    <h2 style="color:#6ee7b7">🔷 Block — Crystal Pillar</h2>
+    <p>บล็อครูปทรงพิเศษ ไม่ใช่แค่ cube ธรรมดา</p>
+  </div>
+
+  <h3>โมเดล Crystal Pillar (มุมมองต่างๆ)</h3>
+  <div class="model-grid">
+    <div class="model-viewer">
+      <div class="mv-label">ISOMETRIC VIEW</div>
+      <svg width="160" height="180" viewBox="0 0 160 180">
+        <!-- isometric crystal pillar using parallelograms -->
+        <!-- TOP face -->
+        <polygon points="80,20 120,40 80,60 40,40" fill="#BAE6FD" stroke="#38BDF8" stroke-width="1.5"/>
+        <!-- inner top highlight -->
+        <polygon points="80,26 112,42 80,54 48,42" fill="#E0F2FE" opacity=".5"/>
+        <!-- RIGHT face -->
+        <polygon points="120,40 120,140 80,160 80,60" fill="#7DD3FC" stroke="#38BDF8" stroke-width="1.5"/>
+        <!-- RIGHT face shading lines (crystal effect) -->
+        <line x1="120" y1="65" x2="95" y2="78" stroke="#fff" stroke-width=".6" opacity=".3"/>
+        <line x1="120" y1="90" x2="95" y2="103" stroke="#fff" stroke-width=".6" opacity=".3"/>
+        <line x1="120" y1="115" x2="95" y2="128" stroke="#fff" stroke-width=".6" opacity=".3"/>
+        <!-- LEFT face -->
+        <polygon points="40,40 80,60 80,160 40,140" fill="#38BDF8" stroke="#0EA5E9" stroke-width="1.5"/>
+        <!-- LEFT face shading -->
+        <line x1="40" y1="65" x2="65" y2="78" stroke="#fff" stroke-width=".6" opacity=".2"/>
+        <line x1="40" y1="90" x2="65" y2="103" stroke="#fff" stroke-width=".6" opacity=".2"/>
+        <!-- BOTTOM edge -->
+        <line x1="40" y1="140" x2="80" y2="160" stroke="#0EA5E9" stroke-width="1.5"/>
+        <line x1="80" y1="160" x2="120" y2="140" stroke="#0EA5E9" stroke-width="1.5"/>
+        <!-- labels -->
+        <text x="68" y="42" fill="#0a0e1a" font-size="9" font-weight="bold" font-family="monospace">TOP</text>
+        <text x="90" y="108" fill="#0a0e1a" font-size="8" font-family="monospace">RIGHT</text>
+        <text x="44" y="108" fill="#0a0e1a" font-size="8" font-family="monospace">LEFT</text>
+        <!-- dimension -->
+        <text x="4" y="100" fill="#34d399" font-size="8" font-family="monospace">16u</text>
+        <line x1="22" y1="40" x2="22" y2="140" stroke="#34d399" stroke-width=".8" stroke-dasharray="3,2"/>
+        <line x1="16" y1="40" x2="28" y2="40" stroke="#34d399" stroke-width=".8"/>
+        <line x1="16" y1="140" x2="28" y2="140" stroke="#34d399" stroke-width=".8"/>
+      </svg>
+    </div>
+    <div class="model-viewer">
+      <div class="mv-label">TOP VIEW + COLLISION</div>
+      <svg width="160" height="160" viewBox="0 0 160 160">
+        <!-- collision box outline -->
+        <rect x="16" y="16" width="128" height="128" fill="none" stroke="#f87171" stroke-width="1" stroke-dasharray="5,4" rx="2"/>
+        <text x="18" y="13" fill="#f87171" font-size="7" font-family="monospace">collision_box [-8,0,-8] size[16,16,16]</text>
+        <!-- outer cube_ext (wider) -->
+        <rect x="28" y="28" width="104" height="104" fill="#38BDF8" opacity=".15" stroke="#38BDF8" stroke-width="1" rx="2"/>
+        <!-- inner cube_mid -->
+        <rect x="48" y="48" width="64" height="64" fill="#BAE6FD" opacity=".25" stroke="#7DD3FC" stroke-width="1.5" rx="2"/>
+        <!-- center point -->
+        <circle cx="80" cy="80" r="3" fill="#34d399"/>
+        <!-- dimension lines -->
+        <line x1="28" y1="140" x2="132" y2="140" stroke="#38BDF8" stroke-width=".8" stroke-dasharray="2,2"/>
+        <text x="58" y="152" fill="#38BDF8" font-size="8" font-family="monospace">cube_ext: 8u</text>
+        <line x1="48" y1="144" x2="112" y2="144" stroke="#7DD3FC" stroke-width=".8" stroke-dasharray="2,2"/>
+        <text x="54" y="156" fill="#7DD3FC" font-size="8" font-family="monospace">cube_mid: 6u</text>
+        <!-- labels -->
+        <text x="54" y="76" fill="#7DD3FC" font-size="8" font-family="monospace">cube_mid</text>
+        <text x="54" y="86" fill="#7DD3FC" font-size="8" font-family="monospace">6×16×6</text>
+        <text x="30" y="36" fill="#38BDF8" font-size="7" font-family="monospace">cube_ext</text>
+        <text x="30" y="45" fill="#38BDF8" font-size="7" font-family="monospace">8×12×8</text>
+      </svg>
+    </div>
+  </div>
+
+  <div class="box warn">
+    <strong>⚠ ขอบเขตบล็อค</strong>
+    ทุก cube ต้องอยู่ใน X/Z: -8 ถึง 8  และ  Y: 0 ถึง 16 เท่านั้น<br>
+    ถ้าเกินขอบเขต → render ผิดพลาด
+  </div>
+
+  <h3>ขั้นตอนสร้าง</h3>
+  <div class="steps" id="bs"></div>
+</section>
+
+<hr>
+
+<!-- ARMOR -->
+<section id="armor">
+  <div class="chapter" style="--accent:#fbbf24;background:linear-gradient(135deg,#2a1a06,#0a0e1a);border-color:#78350f">
+    <div class="ch-no">WORKSHOP 04</div>
+    <h2 style="color:#fcd34d">🛡 Armor — Crystal Set</h2>
+    <p>ชุดเกราะ custom ครบ 4 ชิ้น ใส่บนตัวผู้เล่น</p>
+  </div>
+
+  <h3>โมเดล Player + Armor (เปรียบเทียบขนาด)</h3>
+  <div class="model-viewer">
+    <div class="mv-label">ARMOR SIZE COMPARISON — FRONT VIEW</div>
+    <svg width="300" height="220" viewBox="0 0 300 220">
+      <!-- VANILLA PLAYER (left) -->
+      <g transform="translate(30,10)">
+        <text x="14" y="0" fill="#94a3b8" font-size="8" font-family="monospace">VANILLA</text>
+        <!-- head -->
+        <rect x="16" y="8" width="32" height="32" rx="2" fill="#F5D0A9" stroke="#94a3b8" stroke-width="1"/>
+        <!-- body -->
+        <rect x="12" y="42" width="40" height="48" rx="2" fill="#6B93D6" stroke="#94a3b8" stroke-width="1"/>
+        <!-- arms -->
+        <rect x="-4" y="42" width="14" height="40" rx="2" fill="#6B93D6" stroke="#94a3b8" stroke-width="1"/>
+        <rect x="54" y="42" width="14" height="40" rx="2" fill="#6B93D6" stroke="#94a3b8" stroke-width="1"/>
+        <!-- legs -->
+        <rect x="12" y="92" width="18" height="40" rx="2" fill="#3B5998" stroke="#94a3b8" stroke-width="1"/>
+        <rect x="34" y="92" width="18" height="40" rx="2" fill="#3B5998" stroke="#94a3b8" stroke-width="1"/>
+        <!-- dimension lines -->
+        <line x1="-14" y1="8" x2="-14" y2="40" stroke="#94a3b8" stroke-width=".8" stroke-dasharray="2,2"/>
+        <text x="-30" y="26" fill="#94a3b8" font-size="7" font-family="monospace">8u</text>
+      </g>
+
+      <!-- ARMOR PLAYER (right) -->
+      <g transform="translate(160,10)">
+        <text x="8" y="0" fill="#fbbf24" font-size="8" font-family="monospace">+ CRYSTAL ARMOR</text>
+        <!-- helmet (bigger than head) -->
+        <rect x="13" y="5" width="38" height="38" rx="3" fill="#BAE6FD" stroke="#38BDF8" stroke-width="1.5" opacity=".85"/>
+        <!-- crown spike -->
+        <rect x="27" y="-2" width="10" height="10" rx="2" fill="#BAE6FD" stroke="#38BDF8" stroke-width="1.5"/>
+        <!-- head underneath -->
+        <rect x="16" y="8" width="32" height="32" rx="2" fill="#F5D0A9" stroke="#94a3b8" stroke-width=".5" opacity=".4"/>
+        <!-- chestplate (bigger than body) -->
+        <rect x="9" y="39" width="46" height="54" rx="3" fill="#BAE6FD" stroke="#38BDF8" stroke-width="1.5" opacity=".85"/>
+        <!-- arm armor (bigger than arms) -->
+        <rect x="-7" y="39" width="18" height="46" rx="3" fill="#BAE6FD" stroke="#38BDF8" stroke-width="1.5" opacity=".85"/>
+        <rect x="53" y="39" width="18" height="46" rx="3" fill="#BAE6FD" stroke="#38BDF8" stroke-width="1.5" opacity=".85"/>
+        <!-- leggings (bigger than legs) -->
+        <rect x="8" y="95" width="22" height="46" rx="3" fill="#93C5FD" stroke="#60A5FA" stroke-width="1.5" opacity=".85"/>
+        <rect x="34" y="95" width="22" height="46" rx="3" fill="#93C5FD" stroke="#60A5FA" stroke-width="1.5" opacity=".85"/>
+        <!-- crystal shine lines -->
+        <line x1="13" y1="50" x2="55" y2="50" stroke="#fff" stroke-width=".6" opacity=".3"/>
+        <line x1="13" y1="70" x2="55" y2="70" stroke="#fff" stroke-width=".6" opacity=".3"/>
+        <!-- offset arrows showing +0.5 -->
+        <line x1="9" y1="39" x2="12" y2="42" stroke="#fbbf24" stroke-width=".8"/>
+        <text x="2" y="50" fill="#fbbf24" font-size="7" font-family="monospace">+0.5u</text>
+      </g>
+
+      <!-- labels -->
+      <text x="10" y="215" fill="#94a3b8" font-size="9" font-family="monospace">Steve vanilla</text>
+      <text x="140" y="215" fill="#fbbf24" font-size="9" font-family="monospace">Crystal Armor (ใหญ่กว่า +0.5)</text>
+    </svg>
+    <div class="mv-label" style="color:#fbbf24;font-size:9px">Armor ต้องใหญ่กว่า vanilla +0.5 unit ทุกด้าน เพื่อไม่ให้ทะลุตัว</div>
+  </div>
+
+  <h3>ขนาด Cube แต่ละชิ้น</h3>
+  <table>
+    <tr><th>ชิ้น</th><th>Bone</th><th>Origin</th><th>Size (+0.5)</th></tr>
+    <tr><td>Helmet</td><td>hat [0,24,0]</td><td>-4.5, 19.5, -4.5</td><td>9 × 9 × 9</td></tr>
+    <tr><td>Chestplate</td><td>body [0,24,0]</td><td>-4.5, 5.5, -2.5</td><td>9 × 13 × 5</td></tr>
+    <tr><td>Arm R</td><td>rightArm [-5,22,0]</td><td>-8.5, 11.5, -2.5</td><td>5 × 13 × 5</td></tr>
+    <tr><td>Leggings</td><td>waist [0,12,0]</td><td>-4.5, 11, -2.5</td><td>9 × 4 × 5</td></tr>
+    <tr><td>Boots</td><td>foot_R [-2,0,0]</td><td>-4.5, -0.5, -2.5</td><td>5 × 5 × 5</td></tr>
+  </table>
+
+  <h3>ขั้นตอน — Helmet</h3>
+  <div class="steps" id="as"></div>
+</section>
+
+<hr>
+
+<!-- ANIMATION -->
+<section id="anim">
+  <div class="chapter" style="--accent:#818cf8;background:linear-gradient(135deg,#13143a,#0a0e1a);border-color:#2d2f6a">
+    <div class="ch-no">WORKSHOP 05</div>
+    <h2 style="color:#a5b4fc">🎬 Animation — Crystal Fox Walk</h2>
+    <p>ทำให้ขา 4 เส้นแกว่งสลับกัน และหางแกว่ง</p>
+  </div>
+
+  <h3>การแกว่งขา — Keyframe Diagram</h3>
+  <div class="model-viewer">
+    <div class="mv-label">WALK CYCLE — LEG ROTATION</div>
+    <svg width="280" height="130" viewBox="0 0 280 130">
+      <!-- timeline axis -->
+      <line x1="20" y1="70" x2="260" y2="70" stroke="#334155" stroke-width="1"/>
+      <!-- keyframe markers -->
+      <circle cx="20"  cy="70" r="4" fill="#818cf8"/>
+      <circle cx="140" cy="70" r="4" fill="#818cf8"/>
+      <circle cx="260" cy="70" r="4" fill="#818cf8"/>
+      <text x="12"  y="85" fill="#818cf8" font-size="8" font-family="monospace">0.0</text>
+      <text x="132" y="85" fill="#818cf8" font-size="8" font-family="monospace">0.5</text>
+      <text x="252" y="85" fill="#818cf8" font-size="8" font-family="monospace">1.0</text>
+
+      <!-- leg_FL curve (goes forward then back) -->
+      <path d="M20,50 C80,20 100,50 140,90 C180,130 200,90 260,50"
+            fill="none" stroke="#34d399" stroke-width="2"/>
+      <!-- leg_FR curve (opposite) -->
+      <path d="M20,90 C80,120 100,90 140,50 C180,20 200,50 260,90"
+            fill="none" stroke="#f87171" stroke-width="2"/>
+
+      <!-- degree labels -->
+      <text x="22"  y="46" fill="#34d399" font-size="8" font-family="monospace">+20°</text>
+      <text x="122" y="106" fill="#34d399" font-size="8" font-family="monospace">-20°</text>
+      <text x="22"  y="106" fill="#f87171" font-size="8" font-family="monospace">-20°</text>
+      <text x="122" y="46" fill="#f87171" font-size="8" font-family="monospace">+20°</text>
+
+      <!-- legend -->
+      <rect x="160" y="8" width="10" height="3" fill="#34d399" rx="1"/>
+      <text x="174" y="14" fill="#34d399" font-size="8" font-family="monospace">leg_FL / leg_BR</text>
+      <rect x="160" y="18" width="10" height="3" fill="#f87171" rx="1"/>
+      <text x="174" y="24" fill="#f87171" font-size="8" font-family="monospace">leg_FR / leg_BL</text>
+
+      <!-- 0 line label -->
+      <text x="2" y="73" fill="#475569" font-size="7" font-family="monospace">0°</text>
+    </svg>
+    <div class="mv-label" style="color:#94a3b8;font-size:9px">ขา diagonal คู่กัน — FL กับ BR แกว่งพร้อมกัน, FR กับ BL ตรงข้าม</div>
+  </div>
+
+  <h3>animation.json — Walk Cycle</h3>
+  <pre><span class="cm">// RP/animations/crystal_fox.animation.json</span>
+"animation.crystal_fox.walk": {
+  "loop": true,
+  "animation_length": 1.0,
+  "bones": {
+    "leg_FL": { "rotation": { "0.0":[20,0,0], "0.5":[-20,0,0], "1.0":[20,0,0] } },
+    "leg_FR": { "rotation": { "0.0":[-20,0,0], "0.5":[20,0,0], "1.0":[-20,0,0] } },
+    "leg_BL": { "rotation": { "0.0":[-20,0,0], "0.5":[20,0,0], "1.0":[-20,0,0] } },
+    "leg_BR": { "rotation": { "0.0":[20,0,0], "0.5":[-20,0,0], "1.0":[20,0,0] } },
+    "tail":   { "rotation": { "0.0":[0,0,10], "0.5":[0,0,-10], "1.0":[0,0,10] } }
+  }
+}</pre>
+</section>
+
+</div><!-- /wrap -->
+
+<script>
+function renderSteps(data, id, color) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.innerHTML = data.map((s,i) => `
+    <div class="step">
+      <div class="sn" style="background:${color}">${i+1}</div>
+      <div class="sb"><strong>${s[0]}</strong><span>${s[1]}</span></div>
+    </div>`).join('');
+}
+
+renderSteps([
+  ['New Bedrock Model', 'File > New > Bedrock Model | Identifier: geometry.crystal_fox | Texture: 64×64'],
+  ['สร้าง Bone root', 'Outliner > คลิกขวา > Add Bone | ชื่อ: root | Pivot: 0,0,0'],
+  ['สร้าง Bone body ใต้ root', 'ชื่อ: body | Pivot: 0,10,0'],
+  ['Add Cube ลำตัว', 'Origin: -4,6,-3 | Size: 8,10,6 | UV: 0,0'],
+  ['สร้าง Bone head ใต้ body', 'ชื่อ: head | Pivot: 0,18,0'],
+  ['Add Cube หัว', 'Origin: -3,16,-5 | Size: 6,6,6 | UV: 28,0'],
+  ['Add snout, ear_L, ear_R ใต้ head', 'ตามขนาดใน Bone Hierarchy ด้านบน'],
+  ['Add 4 ขา ใต้ root', 'leg_FL, leg_FR, leg_BL, leg_BR ตาม pivot'],
+  ['Add tail ใต้ body', 'Pivot: 0,10,4 | Cube: -1.5,10,4 size 3,4,4'],
+  ['UV Map ทุก cube', 'เปิด UV Editor — จัดไม่ให้ซ้อนทับ ตามผัง UV ด้านบน'],
+  ['วาด Texture', 'แท็บ Paint | ตัว: #C4956A | หู: #FF9999 | ขา: #8B6347'],
+  ['Export Geometry', 'File > Export > Bedrock Geometry → RP/models/entity/'],
+  ['Export Texture', 'File > Export > Textures → RP/textures/entity/crystal_fox.png'],
+], 'es', '#6366f1');
+
+renderSteps([
+  ['New Bedrock Model', 'Identifier: geometry.crystal_blade | Texture: 32×32'],
+  ['สร้าง Bone root', 'Pivot: 0,0,0'],
+  ['Add Cube blade_main', 'Origin: -0.5,4,-0.5 | Size: 1,14,1 | UV: 0,0 (แนวตั้งยาว)'],
+  ['Add Cube blade_edge L/R', 'L: -1,6,-0.25 size 0.5,10,0.5 | R: mirror'],
+  ['Add Cube blade_tip', 'Origin: -0.25,18,-0.25 | Size: 0.5,2,0.5'],
+  ['Add Cube crossguard', 'Origin: -2.5,3,-0.5 | Size: 5,1,1 (กว้าง)'],
+  ['Add Cube handle + pommel', 'handle: 1×3×1 | pommel: 2×1×2'],
+  ['UV + วาด Texture', 'ใบดาบ: #BAE6FD | กาดมือ: #FFD700 | ด้าม: #6B3A2A'],
+  ['Export', 'RP/models/entity/crystal_blade.geo.json'],
+], 'is', '#0ea5e9');
+
+renderSteps([
+  ['New "Bedrock Block" (ไม่ใช่ Entity!)', 'File > New > เลือก Bedrock Block'],
+  ['Identifier', 'geometry.crystal_pillar | Texture: 16×32'],
+  ['สร้าง Bone root', 'Pivot: 0,0,0 ทุก cube ต้องอยู่ใน -8 ถึง 8'],
+  ['Add Cube cube_mid', 'Origin: -3,0,-3 | Size: 6,16,6 | UV: 0,0'],
+  ['Add Cube cube_ext', 'Origin: -4,2,-4 | Size: 8,12,8 | UV: 0,16 (ทับกัน)'],
+  ['UV + วาด Texture', 'Top/Bottom: pattern crystal | ด้านข้าง: stripe แนวตั้ง'],
+  ['Export', 'RP/models/blocks/crystal_pillar.geo.json'],
+], 'bs', '#10b981');
+
+renderSteps([
+  ['New Bedrock Model', 'Identifier: geometry.crystal_helmet | Texture: 64×32'],
+  ['สร้าง Bone root', 'Pivot: 0,0,0'],
+  ['สร้าง Bone hat', 'Pivot: 0,24,0 (ตำแหน่งคอ)'],
+  ['Add Cube hat_main', 'Origin: -4.5,19.5,-4.5 | Size: 9,9,9 (+0.5 กว่า head)'],
+  ['Add Cube hat_crown (optional)', 'Origin: -1.5,28.5,-1.5 | Size: 3,3,3 (ยอดมงกุฎ)'],
+  ['UV + วาด', 'สีหลัก: #BAE6FD | ขอบ: #E0F7FA'],
+  ['Export', 'RP/models/entity/crystal_helmet.geo.json'],
+  ['ทำ chestplate, leggings, boots เหมือนกัน', 'ตาม bone hierarchy ในตาราง'],
+], 'as', '#f59e0b');
+</script>
+</body>
+</html>
